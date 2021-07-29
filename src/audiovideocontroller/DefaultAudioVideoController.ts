@@ -709,6 +709,7 @@ export default class DefaultAudioVideoController
 
       await new SerialGroupTask(this.logger, this.wrapTaskName('AudioVideoClean'), subtasks).run();
     } catch (cleanError) {
+      /* istanbul ignore next */
       this.logger.info('fail to clean');
     }
     this.sessionStateController.perform(SessionStateControllerAction.FinishDisconnecting, () => {
