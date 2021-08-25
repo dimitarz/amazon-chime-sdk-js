@@ -68,6 +68,9 @@ import {
 import CircularCut from './videofilter/CircularCut';
 import EmojifyVideoFrameProcessor from './videofilter/EmojifyVideoFrameProcessor';
 import SegmentationProcessor from './videofilter/SegmentationProcessor';
+import SelfieSegmentationProcessor from './videofilter/SelfieSegmentationProcessor';
+import CWTSegmentationProcessor from './videofilter/CWTSegmentationProcessor';
+
 import {
   loadBodyPixDependency,
   platformCanSupportBodyPixWithoutDegradation,
@@ -153,9 +156,9 @@ const VOICE_FOCUS_SPEC = {
 
 const MAX_VOICE_FOCUS_COMPLEXITY: VoiceFocusModelComplexity | undefined = undefined;
 
-type VideoFilterName = 'Emojify' | 'CircularCut' | 'NoOp' | 'Segmentation' | 'None';
+type VideoFilterName = 'Emojify' | 'CircularCut' | 'NoOp' | 'Segmentation' | 'Selfie' | 'CWT' | 'None';
 
-const VIDEO_FILTERS: VideoFilterName[] = ['Emojify', 'CircularCut', 'NoOp'];
+const VIDEO_FILTERS: VideoFilterName[] = ['Emojify', 'CircularCut', 'Selfie', 'CWT', 'NoOp'];
 
 class TestSound {
   static testAudioElement = new Audio();
@@ -2503,6 +2506,14 @@ export class DemoMeetingApp
       return new SegmentationProcessor();
     }
 
+    if (videoFilter === 'Selfie') {
+      return new SelfieSegmentationProcessor();
+    }
+
+    if (videoFilter === 'CWT') {
+      return new CWTSegmentationProcessor();
+    }
+    
     return null;
   }
 

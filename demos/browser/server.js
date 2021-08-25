@@ -7,6 +7,7 @@ const fs = require('fs');
 const http = require('http');
 const url = require('url');
 const { v4: uuidv4 } = require('uuid');
+const mime = require('mime-types')
 
 // Store created meetings in a map so attendees can join by meeting title.
 const meetingTable = {};
@@ -135,6 +136,15 @@ function serve(host = '127.0.0.1:8080') {
           sessionToken: AWS.config.credentials.sessionToken,
         };
         respond(response, 200, 'application/json', JSON.stringify(awsCredentials), true);
+      } else if (request.method === 'GET') {
+        const fileName = requestUrl.pathname.substring(1);
+        fs.access(fileName, (err) => {
+          if (!err) {
+            respond(response, 200, mime.lookup(fileName), fs.readFileSync(fileName));
+          } else {
+            respond(response, 404, 'text/html', '404 Not Found');
+          }
+        });
       } else {
         respond(response, 404, 'text/html', '404 Not Found');
       }
