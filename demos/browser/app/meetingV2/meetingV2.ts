@@ -138,6 +138,15 @@ const VOICE_FOCUS_SPEC = {
   paths: VOICE_FOCUS_PATHS,
 };
 
+function getVoiceFocusSpec(joinInfo: any): VoiceFocusSpec {
+  const es = joinInfo.Meeting.MeetingFeatures?.Audio?.VoiceFocusEchoReduction === 'AVAILABLE';
+  let spec: VoiceFocusSpec = VOICE_FOCUS_SPEC;
+  if (!spec.name) {
+    spec.name =  es ? voiceFocusName('ns_es') : voiceFocusName('default');
+  }
+  return spec;
+};
+
 const MAX_VOICE_FOCUS_COMPLEXITY: VoiceFocusModelComplexity | undefined = undefined;
 
 const BACKGROUND_BLUR_CDN = search.get('blurCDN') || undefined;
@@ -316,6 +325,7 @@ export class DemoMeetingApp
   usePriorityBasedDownlinkPolicy = false;
   videoPriorityBasedPolicyConfig = VideoPriorityBasedPolicyConfig.Default;
   enablePin = false;
+  echoReductionCapability = false;
 
   supportsVoiceFocus = false;
   enableVoiceFocus = false;
@@ -336,6 +346,7 @@ export class DemoMeetingApp
 
   voiceFocusTransformer: VoiceFocusDeviceTransformer | undefined;
   voiceFocusDevice: VoiceFocusTransformDevice | undefined;
+  joinInfo: any | undefined;
 
   bbprocessor: BackgroundBlurProcessor | undefined;
 
@@ -464,8 +475,10 @@ export class DemoMeetingApp
       return;
     }
 
+    const spec: VoiceFocusSpec = getVoiceFocusSpec(this.joinInfo);
+
     try {
-      this.supportsVoiceFocus = await VoiceFocusDeviceTransformer.isSupported(VOICE_FOCUS_SPEC, {
+      this.supportsVoiceFocus = await VoiceFocusDeviceTransformer.isSupported(spec, {
         logger,
       });
       if (this.supportsVoiceFocus) {
@@ -547,6 +560,10 @@ export class DemoMeetingApp
       this.enableEventReporting = (document.getElementById('event-reporting') as HTMLInputElement).checked;
       this.enableWebAudio = (document.getElementById('webaudio') as HTMLInputElement).checked;
       this.usePriorityBasedDownlinkPolicy = (document.getElementById('priority-downlink-policy') as HTMLInputElement).checked;
+      this.echoReductionCapability = (document.getElementById('echo-reduction-capability') as HTMLInputElement).checked;
+      if (this.echoReductionCapability) {
+        (document.getElementById('add-voice-focus') as HTMLInputElement).checked = true;
+      }
 
       const chosenLogLevel = (document.getElementById('logLevelSelect') as HTMLSelectElement).value;
       switch (chosenLogLevel) {
@@ -2002,7 +2019,7 @@ export class DemoMeetingApp
     const response = await fetch(
       `${DemoMeetingApp.BASE_URL}join?title=${encodeURIComponent(
         this.meeting
-      )}&name=${encodeURIComponent(this.name)}&region=${encodeURIComponent(this.region)}`,
+      )}&name=${encodeURIComponent(this.name)}&region=${encodeURIComponent(this.region)}&ns_es=${this.echoReductionCapability}`,
       {
         method: 'POST',
       }
@@ -2716,16 +2733,16 @@ export class DemoMeetingApp
     const logger = new ConsoleLogger('SDK', LogLevel.DEBUG);
 
     // Find out what it will actually execute, and cap it if needed.
-    const spec: VoiceFocusSpec = { ...VOICE_FOCUS_SPEC };
+    const spec: VoiceFocusSpec = getVoiceFocusSpec(this.joinInfo);
     const config = await VoiceFocusDeviceTransformer.configure(spec, { logger });
 
     let transformer;
     if (maxComplexity && config.supported && exceeds(config.model.variant)) {
       logger.info(`Downgrading VF to ${maxComplexity}`);
       spec.variant = maxComplexity;
-      transformer = VoiceFocusDeviceTransformer.create(spec, { logger });
+      transformer = VoiceFocusDeviceTransformer.create(spec, { logger }, undefined, this.joinInfo);
     } else {
-      transformer = VoiceFocusDeviceTransformer.create(spec, { logger }, config);
+      transformer = VoiceFocusDeviceTransformer.create(spec, { logger }, config, this.joinInfo);
     }
 
     return this.voiceFocusTransformer = await transformer;
@@ -2992,8 +3009,8 @@ export class DemoMeetingApp
   }
 
   async authenticate(): Promise<string> {
-    const joinInfo = (await this.joinMeeting()).JoinInfo;
-    const configuration = new MeetingSessionConfiguration(joinInfo.Meeting, joinInfo.Attendee);
+    this.joinInfo = (await this.joinMeeting()).JoinInfo;
+    const configuration = new MeetingSessionConfiguration(this.joinInfo.Meeting, this.joinInfo.Attendee);
     await this.initializeMeetingSession(configuration);
     const url = new URL(window.location.href);
     url.searchParams.set('m', this.meeting);
