@@ -139,7 +139,7 @@ const VOICE_FOCUS_SPEC = {
 };
 
 function getVoiceFocusSpec(joinInfo: any): VoiceFocusSpec {
-  const es = joinInfo.Meeting.MeetingFeatures?.Audio?.VoiceFocusEchoReduction === 'AVAILABLE';
+  const es = joinInfo.Meeting.Meeting?.MeetingFeatures?.Audio?.VoiceFocusEchoReduction === 'AVAILABLE';
   let spec: VoiceFocusSpec = VOICE_FOCUS_SPEC;
   if (!spec.name) {
     spec.name =  es ? voiceFocusName('ns_es') : voiceFocusName('default');
@@ -563,6 +563,7 @@ export class DemoMeetingApp
       this.echoReductionCapability = (document.getElementById('echo-reduction-capability') as HTMLInputElement).checked;
       if (this.echoReductionCapability) {
         (document.getElementById('add-voice-focus') as HTMLInputElement).checked = true;
+        this.enableVoiceFocus = (document.getElementById('add-voice-focus') as HTMLInputElement).checked;
       }
 
       const chosenLogLevel = (document.getElementById('logLevelSelect') as HTMLSelectElement).value;
